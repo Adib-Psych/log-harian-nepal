@@ -229,3 +229,25 @@ header .sub{font-size:13px;color:var(--muted)}
   .wrap>header,.wrap>.akun,.wrap>.gatecard,.wrap>.foot{grid-column:1/-1}
   #secDay{grid-row:span 3}
 }
+
+/* tab tampilan */
+.tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{flex:1;font:600 14px var(--f-body);border:0;border-radius:9px;padding:9px 10px;background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--un);color:var(--onun)}
+body:not(.view-bayar) [data-v="bayar"],body.view-bayar [data-v="harian"]{display:none!important}
+/* pembayaran */
+.hstack.pb i.dib,.pbleg i.dib{background:var(--hero-good)} .hstack.pb i.aju,.pbleg i.aju{background:var(--hero-warn)} .hstack.pb i.proy,.pbleg i.proy{background:var(--hero-used);opacity:.55}
+.pbleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--hero-mute)}
+.pbleg span{display:inline-flex;align-items:center;gap:5px} .pbleg i{width:10px;height:10px;border-radius:3px;display:inline-block} .pbleg b{color:var(--hero-ink);font-family:var(--f-mono)}
+.invs{display:grid}
+.inv{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:12px 2px;border-top:1px solid var(--line)}
+.inv:first-child{border-top:0}
+.inv .k{font-weight:600;font-size:14.5px} .inv .a{text-align:right;font:600 15px var(--f-mono)}
+.inv .d{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.chip{font:600 11.5px var(--f-body);padding:2px 9px;border-radius:999px}
+.chip.dibayar{background:var(--okbg);color:var(--ok)} .chip.diajukan{background:var(--warnbg);color:var(--warn)} .chip.proyeksi{background:var(--sky);color:var(--deep)}
+.inv .act{grid-column:1/-1}
+.inv .act .btn{padding:7px 12px;font-size:13px}
+.inv form{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;background:var(--soft);border-radius:10px;padding:10px}
+@media (max-width:420px){.inv form{grid-template-columns:1fr}}
+@media (min-width:1080px){ #secBayarHero,.tabs{grid-column:1/-1} }

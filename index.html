@@ -31,8 +31,12 @@
   </section>
 
   <div id="app" class="hide" style="display:contents">
+  <nav class="tabs" role="tablist" aria-label="Tampilan">
+    <button type="button" role="tab" id="tabHarian" aria-selected="true">Harian</button>
+    <button type="button" role="tab" id="tabBayar" aria-selected="false">Pembayaran</button>
+  </nav>
   <!-- sisa jatah -->
-  <section class="hero" aria-labelledby="heroT" id="secHero">
+  <section class="hero" aria-labelledby="heroT" id="secHero" data-v="harian">
     <div class="top">
       <div>
         <div class="lab" id="heroT">Sisa jatah <i>other costs</i></div>
@@ -52,7 +56,7 @@
   </section>
 
   <!-- ringkasan -->
-  <section class="card" aria-labelledby="sumT" id="secSum">
+  <section class="card" aria-labelledby="sumT" id="secSum" data-v="harian">
     <h2 id="sumT" class="hide">Ringkasan</h2>
     <div class="sum">
       <div class="ring" aria-label="Hari billable">
@@ -69,7 +73,7 @@
   </section>
 
   <!-- kalender -->
-  <section class="card" aria-labelledby="calT" id="secCal">
+  <section class="card" aria-labelledby="calT" id="secCal" data-v="harian">
     <div class="calhead">
       <button class="navbtn" id="prevM" type="button" aria-label="Bulan sebelumnya">‹</button>
       <h2 id="calT">–</h2>
@@ -83,7 +87,7 @@
   </section>
 
   <!-- detail hari -->
-  <section class="card" aria-labelledby="dayT" id="secDay">
+  <section class="card" aria-labelledby="dayT" id="secDay" data-v="harian">
     <div class="dayhead"><h2 id="dayT">–</h2><span class="note" id="daySaved"></span></div>
     <p class="note" style="margin:-6px 0 0">Hari kerja bisa disimpan tanpa entri belanja.</p>
     <div>
@@ -160,16 +164,46 @@
   </section>
 
   <!-- grafik -->
-  <section class="card" aria-labelledby="chT" id="secChart">
+  <section class="card" aria-labelledby="chT" id="secChart" data-v="harian">
     <div class="dayhead"><h2 id="chT">Belanja harian</h2><span class="note" id="chSub"></span></div>
     <div class="chart" id="chart"></div>
     <div class="legend"><span><i class="dot" style="background:var(--un);border-radius:2px"></i>Belanja dari jatah</span><span><i class="dot" style="background:var(--bad);border-radius:2px"></i>Lewat jatah</span><span><i style="display:inline-block;width:14px;height:2px;background:var(--ok)"></i>Jatah per hari</span></div>
   </section>
 
   <!-- arsip -->
-  <section class="card" aria-labelledby="arT" id="secArch">
+  <section class="card" aria-labelledby="arT" id="secArch" data-v="harian">
     <div class="dayhead"><h2 id="arT">Arsip nota</h2><span class="note" id="arSub"></span></div>
     <div class="arch" id="arch"></div>
+  </section>
+
+  <!-- ===== tampilan Pembayaran ===== -->
+  <section class="hero" data-v="bayar" id="secBayarHero" aria-labelledby="pbT">
+    <div class="top">
+      <div>
+        <div class="lab" id="pbT">Sudah diterima dari RVO</div>
+        <div class="big" id="pbDiterima">–</div>
+        <div class="rp" id="pbSub">–</div>
+      </div>
+      <span class="pill" id="pbPill">–</span>
+    </div>
+    <div class="hstack pb" role="img" id="pbBar" aria-label="Posisi terhadap plafon kontrak"><i id="pbB1" class="dib"></i><i id="pbB2" class="aju"></i><i id="pbB3" class="proy"></i></div>
+    <div class="pbleg"><span><i class="dib"></i>Diterima</span><span><i class="aju"></i>Diajukan</span><span><i class="proy"></i>Perkiraan sisa</span><span>Plafon <b id="pbPlafon">–</b></span></div>
+    <div class="hgrid">
+      <div><span>Perkiraan total kontrak</span><b id="pbTotal">–</b><small id="pbTotalS">–</small></div>
+      <div><span>Perkiraan invoice akhir</span><b id="pbAkhir">–</b><small id="pbAkhirS">–</small></div>
+      <div><span>Ruang plafon</span><b id="pbRuang">–</b><small>sisa di bawah plafon</small></div>
+    </div>
+  </section>
+
+  <section class="card" data-v="bayar" aria-labelledby="invT">
+    <div class="dayhead"><h2 id="invT">Invoice &amp; pembayaran</h2><span class="note" id="invSub"></span></div>
+    <div id="invList" class="invs"></div>
+  </section>
+
+  <section class="card" data-v="bayar" aria-labelledby="pyT">
+    <div class="dayhead"><h2 id="pyT">Perkiraan sampai akhir kontrak</h2><span class="note" id="pySub"></span></div>
+    <div class="dtab" id="pyTab"></div>
+    <p class="note" id="pyNote" style="margin:0"></p>
   </section>
 
   <!-- impor (sekali pakai, migrasi dari v1) -->
@@ -181,7 +215,7 @@
   </section>
   </div>
 
-  <p class="note foot">Jatah <i>other costs</i> mengikuti RFQ RVO 202607039: €83/hari Kathmandu, €38/hari kota lain di Nepal, tanpa jatah di luar Nepal. Hanya entri "Jatah other costs" yang mengurangi jatah. Kurs: NPR dan USD dari kurs resmi harian Nepal Rastra Bank, Rupiah dari Kurs Transaksi Bank Indonesia (nilai tengah beli–jual); tiap hari memakai kurs tanggalnya sendiri. Data tersimpan di Firestore (proyek log-harian-nepal), setiap perubahan mencatat siapa, kapan dan alasannya.</p>
+  <p class="note foot" data-v="harian">Jatah <i>other costs</i> mengikuti RFQ RVO 202607039: €83/hari Kathmandu, €38/hari kota lain di Nepal, tanpa jatah di luar Nepal. Hanya entri "Jatah other costs" yang mengurangi jatah. Kurs: NPR dan USD dari kurs resmi harian Nepal Rastra Bank, Rupiah dari Kurs Transaksi Bank Indonesia (nilai tengah beli–jual); tiap hari memakai kurs tanggalnya sendiri. Data tersimpan di Firestore (proyek log-harian-nepal), setiap perubahan mencatat siapa, kapan dan alasannya.</p>
 </div>
 
 <!-- scanner -->

@@ -23,6 +23,7 @@ let db=null, assets=null, cfg=null, hari=new Map(), entri=new Map(), kurs=[];
 let sel=null, month=null, dayBusy=false, dayDraft=null, dayDirty=false, dayStamp=null;
 let form=null;
 let loaded={config:false,hari:false,entri:false,kurs:false};
+let pembayaran=[], kontrak=null;
 
 const todayISO=()=>new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const P=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(Date.UTC(y,m-1,d));};
@@ -400,7 +401,69 @@ function renderArch(){
 }
 
 let rT=null;
-function renderAll(){ if(!db) return; clearTimeout(rT); rT=setTimeout(()=>{ renderSummary(); renderCal(); renderDay(); renderChart(); renderArch(); },16); }
+function renderAll(){ if(!db) return; clearTimeout(rT); rT=setTimeout(()=>{ renderSummary(); renderCal(); renderDay(); renderChart(); renderArch(); renderBayar(); },16); }
+
+/* ---------- pembayaran ---------- */
+const eur0=n=>"€"+(Math.round(n*100)/100).toLocaleString("id-ID",{minimumFractionDigits:2,maximumFractionDigits:2});
+const STATUS={dibayar:"Dibayar",diajukan:"Diajukan, menunggu",proyeksi:"Perkiraan"};
+function renderBayar(){
+  if(!kontrak||!cfg){ $("pbDiterima").textContent="–"; $("invList").innerHTML='<p class="note" style="margin:0">Data kontrak belum ada.</p>'; return; }
+  const sisa=A.proyeksiSisa({hari},kontrak,cfg), pos=A.posisiPembayaran(pembayaran,kontrak,sisa), pl=kontrak.plafonEUR;
+  $("pbDiterima").textContent=eur0(pos.dibayar);
+  const nDib=pembayaran.filter(p=>p.status==="dibayar").length;
+  $("pbSub").innerHTML=`<small>${nDib} pembayaran · biaya yang sudah ditagih ${eur0(pos.biayaTerinvoice)}</small>`;
+  const pill=$("pbPill"); const over=pos.ruangPlafon<0; pill.className="pill"+(over?" bad":pos.diajukan>0?" warn":""); pill.textContent=over?"Melewati plafon":pos.diajukan>0?"Ada yang menunggu":"Semua invoice lunas";
+  const w=v=>Math.max(0,Math.min(100,v/pl*100))+"%";
+  $("pbB1").style.width=w(pos.dibayar); $("pbB2").style.width=w(pos.diajukan); $("pbB3").style.width=w(Math.max(0,pos.invoiceAkhir));
+  $("pbBar").setAttribute("aria-label",`Diterima ${Math.round(pos.dibayar/pl*100)} persen dari plafon`);
+  $("pbPlafon").textContent=eur0(pl);
+  $("pbTotal").textContent=eur0(pos.proyeksiTotal); $("pbTotalS").textContent=`${Math.round(pos.proyeksiTotal/pl*100)}% plafon`;
+  $("pbAkhir").textContent=eur0(pos.invoiceAkhir); $("pbAkhirS").textContent=`sampai ${sd(kontrak.akhir)}`;
+  $("pbRuang").textContent=(pos.ruangPlafon<0?"−":"")+eur0(Math.abs(pos.ruangPlafon));
+  // daftar invoice + baris perkiraan invoice akhir
+  const L=$("invList"); L.innerHTML="";
+  [...pembayaran].sort((a,b)=>(a.urut||0)-(b.urut||0)).concat([{id:"_akhir",nomor:"Invoice akhir",jenis:"perkiraan",periode:`${sd(A_add(kontrak.invoiceSampai,1))} – ${sd(kontrak.akhir)}`,jumlahEUR:pos.invoiceAkhir,status:"proyeksi"}]).forEach(p=>{
+    const el=document.createElement("div"); el.className="inv";
+    const bayarInfo=p.status==="dibayar"?(p.tanggalBayar?`diterima ${sd(p.tanggalBayar)}`:"tanggal terima belum dicatat")+(p.diterimaIDR?` · ${rp(p.diterimaIDR)}`:""):p.diajukan?`diajukan ${sd(p.diajukan)}`:"";
+    el.innerHTML=`<span class="k">${esc(p.nomor)}${p.jenis?` <span class="note">· ${esc(p.jenis)}</span>`:""}</span><span class="a">${eur0(p.jumlahEUR||0)}</span>
+      <span class="d"><span class="chip ${esc(p.status)}">${STATUS[p.status]||esc(p.status)}</span>${p.periode?`<span>${esc(p.periode)}</span>`:""}${bayarInfo?`<span>${esc(bayarInfo)}</span>`:""}${p.catatan?`<span>${esc(p.catatan)}</span>`:""}</span>`;
+    if(p.id!=="_akhir"&&(p.status!=="dibayar"||!p.tanggalBayar||!p.diterimaIDR)){
+      const act=document.createElement("div"); act.className="act";
+      const b=document.createElement("button"); b.type="button"; b.className="btn ghost"; b.textContent=p.status==="dibayar"?"Lengkapi tanggal & Rupiah":"Catat sudah dibayar";
+      b.onclick=()=>formBayar(el,p); act.appendChild(b); el.appendChild(act);
+    }
+    L.appendChild(el);
+  });
+  $("invSub").textContent=`plafon ${eur0(pl)}`;
+  // perkiraan
+  const r=(l,v,s2)=>`<div class="r"><span>${l}</span><b>${eur0(v)}</b>${s2?`<small>${s2}</small>`:""}</div>`;
+  $("pySub").textContent=`${sd(A_add(kontrak.invoiceSampai,1))} – ${sd(kontrak.akhir)}`;
+  $("pyTab").innerHTML=r("Fee",sisa.feeEUR,`${sisa.feeTercatat} hari tercatat + ${sisa.feePerkiraan} hari perkiraan × €${cfg.feePerDay}`)
+    +r("Other costs",sisa.ocEUR,`${sisa.ocHari} hari berjatah`)
+    +r("Akomodasi",sisa.akomodasiEUR,esc(kontrak.akomodasiCatatan||""))
+    +r("Lain-lain",sisa.lainEUR,esc(kontrak.lainCatatan||""))
+    +r("Total perkiraan",sisa.totalEUR,"");
+  const hfInv=pembayaran.reduce((a,p)=>a+(p.hariFee||0),0), hfTot=hfInv+sisa.feeTercatat+sisa.feePerkiraan, ang=kontrak.hariFeeAnggaran;
+  if(ang) $("pyTab").innerHTML+=`<div class="r"><span>Hari fee seluruh kontrak</span><b class="${hfTot>ang?"neg":""}">${hfTot} dari ${ang} hari</b><small>${hfInv} sudah ditagih + ${sisa.feeTercatat+sisa.feePerkiraan} perkiraan${hfTot>ang?` · ${hfTot-ang} hari di atas anggaran perlu persetujuan RVO`:""}</small></div>`;
+  $("pyNote").textContent=kontrak.catatan||"";
+}
+function A_add(s,n){ return addD(s,n); }
+function formBayar(el,p){
+  if(el.querySelector("form")) return;
+  const f=document.createElement("form");
+  f.innerHTML=`<div><label>Tanggal diterima</label><input type="date" name="t" value="${esc(p.tanggalBayar||todayISO())}"></div>
+    <div><label>Diterima (Rp)</label><input name="idr" class="num" inputmode="decimal" placeholder="mis. 130.000.000" value="${p.diterimaIDR?String(p.diterimaIDR):""}"></div>
+    <button class="btn primary" type="submit">Simpan</button>`;
+  f.onsubmit=async ev=>{ ev.preventDefault(); const t=f.t.value, idr=num(f.idr.value);
+    const body=Object.assign({},p,{status:"dibayar",tanggalBayar:t||null,diterimaIDR:idr||null,updatedAt:new Date().toISOString()}); delete body.id; Object.keys(body).forEach(k=>{ if(k.startsWith("_")) delete body[k]; });
+    f.querySelector("button").disabled=true;
+    try{ await db.doc("pembayaran/"+p.id).set(body); }catch(e){ f.querySelector("button").disabled=false; alertLine(f,"Gagal menyimpan"); } };
+  el.appendChild(f);
+}
+function alertLine(f,m){ let s=f.querySelector(".status"); if(!s){ s=document.createElement("div"); s.className="status err"; f.appendChild(s);} s.textContent=m; }
+function setView(v){ document.body.classList.toggle("view-bayar",v==="bayar"); $("tabHarian").setAttribute("aria-selected",String(v!=="bayar")); $("tabBayar").setAttribute("aria-selected",String(v==="bayar")); if(location.hash!==(v==="bayar"?"#pembayaran":"")) history.replaceState(null,"",v==="bayar"?"#pembayaran":location.pathname); if(v!=="bayar"&&month) renderChart(); }
+$("tabHarian").onclick=()=>setView("harian"); $("tabBayar").onclick=()=>setView("bayar");
+setView(location.hash==="#pembayaran"?"bayar":"harian");
 
 /* ---------- events ---------- */
 $("prevM").onclick=()=>{ const i=MONTHS.indexOf(month); if(i>0){ month=MONTHS[i-1]; renderCal(); renderChart(); } };
@@ -456,6 +519,9 @@ window.LH={
     const body=Object.assign({lampiran:[]},old||{},e,{createdAt:(old&&old.createdAt)||e.createdAt||now,updatedAt:now}); delete body.id; Object.keys(body).forEach(k=>{ if(k.startsWith("_")) delete body[k]; });
     return tulisAgen("entri/"+id,body,alasan).then(()=>id); },
   tulisHari(h,alasan){ const body=Object.assign({},h,{updatedAt:new Date().toISOString()}); Object.keys(body).forEach(k=>{ if(k.startsWith("_")) delete body[k]; }); return tulisAgen("hari/"+h.tanggal,body,alasan); },
+  tulisPembayaran(id,p,alasan){ const body={...p,updatedAt:new Date().toISOString()}; delete body.id; return tulisAgen("pembayaran/"+id,body,alasan); },
+  tulisKontrak(k,alasan){ return tulisAgen("config/kontrak",{...k},alasan); },
+  posisi:()=>{ const s2=A.proyeksiSisa({hari},kontrak,cfg); return {sisa:s2,posisi:A.posisiPembayaran(pembayaran,kontrak,s2)}; },
   tulisKurs(tanggal,k,alasan){ const body={...k}; delete body.tanggal; return tulisAgen("kurs/"+tanggal,body,alasan); },
   async hapusEntri(id,alasan){ if(!alasan) throw new Error("alasan wajib diisi"); konteksTulis("agen-chrome",alasan); try{ await db.doc("entri/"+id).delete(); } finally{ konteksTulis("halaman",""); } },
 };
@@ -480,5 +546,7 @@ pantauAkun(async user=>{
   unsub.push(db.doc("config/params").onSnapshot(s=>{ cfg=s.exists?s.data():null; loaded.config=true; renderAll(); },err));
   unsub.push(db.collection("kurs").onSnapshot(q=>{ const a=[]; q.docs.forEach(d=>{ if(d.exists) a.push(Object.assign({tanggal:d.id},d.data())); }); a.sort((x,y)=>x.tanggal.localeCompare(y.tanggal)); kurs=a; loaded.kurs=true; renderAll(); },err));
   unsub.push(db.collection("hari").onSnapshot(q=>{ const m=new Map(); q.docs.forEach(d=>{ if(d.exists){ const v=d.data(); m.set(v.tanggal||d.id,Object.assign({tanggal:d.id},v)); } }); hari=m; loaded.hari=true; renderAll(); $("secImpor").classList.toggle("hide",!!(hari.size||entri.size)); },err));
+  unsub.push(db.doc("config/kontrak").onSnapshot(sn=>{ kontrak=sn.exists?sn.data():null; renderAll(); },err));
+  unsub.push(db.collection("pembayaran").onSnapshot(q=>{ pembayaran=q.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id},d.data())); renderAll(); },err));
   unsub.push(db.collection("entri").onSnapshot(q=>{ const m=new Map(); q.docs.forEach(d=>{ if(d.exists) m.set(d.id,Object.assign({id:d.id},d.data())); }); entri=m; loaded.entri=true; renderAll(); $("secImpor").classList.toggle("hide",!!(hari.size||entri.size)); },err));
 });

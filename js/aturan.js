@@ -83,3 +83,36 @@ export function kanonik(v) {
   }
   return JSON.stringify(v);
 }
+
+// ---------- Pembayaran & proyeksi sampai akhir kontrak ----------
+// kontrak: {plafonEUR, akhir, invoiceSampai, hariKerjaPerMinggu, libur:[0..6], akomodasiProyeksiEUR, lainProyeksiEUR}
+// Hari setelah invoice terakhir: yang sudah dicatat memakai jenis & lokasinya; yang belum dicatat diperkirakan
+// (hari kerja kecuali hari libur mingguan; hari terakhir = perjalanan pulang, dibayar fee).
+export function proyeksiSisa(st, kontrak, cfg) {
+  const hari = st.hari instanceof Map ? st.hari : new Map(Object.entries(st.hari || {}));
+  const fee = (cfg && cfg.feePerDay) || 0, libur = new Set(kontrak.libur || [0]);
+  const out = { feeTercatat: 0, feePerkiraan: 0, hariTanpaCatatan: 0, ocEUR: 0, ocHari: 0 };
+  const P = s => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+  for (let t = P(kontrak.invoiceSampai).getTime() + 864e5; t <= P(kontrak.akhir).getTime(); t += 864e5) {
+    const d = new Date(t).toISOString().slice(0, 10), h = hari.get(d);
+    if (h && h.jenis) { if (BILL.has(h.jenis)) out.feeTercatat++; }
+    else { out.hariTanpaCatatan++; if (d === kontrak.akhir || !libur.has(new Date(t).getUTCDay())) out.feePerkiraan++; }
+    const j = jatahEUR(hari, cfg, d); if (j) { out.ocEUR += j; out.ocHari++; }
+  }
+  out.feeEUR = (out.feeTercatat + out.feePerkiraan) * fee;
+  out.akomodasiEUR = kontrak.akomodasiProyeksiEUR || 0;
+  out.lainEUR = kontrak.lainProyeksiEUR || 0;
+  out.totalEUR = round2(out.feeEUR + out.ocEUR + out.akomodasiEUR + out.lainEUR);
+  return out;
+}
+
+export function posisiPembayaran(pembayaran, kontrak, sisa) {
+  const list = [...pembayaran].sort((a, b) => (a.urut || 0) - (b.urut || 0));
+  const dibayar = list.filter(p => p.status === "dibayar").reduce((s, p) => s + (p.jumlahEUR || 0), 0);
+  const diajukan = list.filter(p => p.status === "diajukan").reduce((s, p) => s + (p.jumlahEUR || 0), 0);
+  const terakhir = list.filter(p => p.totalBiayaEUR).slice(-1)[0];
+  const biayaTerinvoice = terakhir ? terakhir.totalBiayaEUR : dibayar + diajukan;
+  const proyeksiTotal = round2(biayaTerinvoice + sisa.totalEUR);
+  return { dibayar: round2(dibayar), diajukan: round2(diajukan), biayaTerinvoice, proyeksiTotal,
+    invoiceAkhir: round2(proyeksiTotal - dibayar - diajukan), ruangPlafon: round2(kontrak.plafonEUR - proyeksiTotal) };
+}

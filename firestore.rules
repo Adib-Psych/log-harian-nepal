@@ -15,7 +15,7 @@ service cloud.firestore {
       return request.resource.data._oleh == request.auth.token.email
           && request.resource.data._waktu == request.time;
     }
-    function data(k) { return k in ['config', 'hari', 'entri', 'kurs', 'nota']; }
+    function data(k) { return k in ['config', 'hari', 'entri', 'kurs', 'nota', 'pembayaran']; }
 
     match /akses/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

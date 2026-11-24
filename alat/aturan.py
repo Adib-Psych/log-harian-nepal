@@ -106,3 +106,40 @@ def kanonik(v):
     if isinstance(v, (bool, int, float)):
         return _num(v)
     return json.dumps(v, ensure_ascii=False)
+
+
+# ---------- Pembayaran & proyeksi (padanan js/aturan.js) ----------
+def proyeksi_sisa(hari, kontrak, cfg):
+    import datetime as _dt
+    fee = (cfg or {}).get("feePerDay") or 0
+    libur = set(kontrak.get("libur", [0]))
+    out = {"feeTercatat": 0, "feePerkiraan": 0, "hariTanpaCatatan": 0, "ocEUR": 0, "ocHari": 0}
+    d = _dt.date.fromisoformat(kontrak["invoiceSampai"]) + _dt.timedelta(days=1)
+    akhir = _dt.date.fromisoformat(kontrak["akhir"])
+    while d <= akhir:
+        s = d.isoformat(); h = hari.get(s)
+        if h and h.get("jenis"):
+            if h["jenis"] in BILL: out["feeTercatat"] += 1
+        else:
+            out["hariTanpaCatatan"] += 1
+            js_day = (d.weekday() + 1) % 7  # JS: Minggu = 0
+            if s == kontrak["akhir"] or js_day not in libur: out["feePerkiraan"] += 1
+        j = jatah_eur(hari, cfg, s)
+        if j: out["ocEUR"] += j; out["ocHari"] += 1
+        d += _dt.timedelta(days=1)
+    out["feeEUR"] = (out["feeTercatat"] + out["feePerkiraan"]) * fee
+    out["akomodasiEUR"] = kontrak.get("akomodasiProyeksiEUR") or 0
+    out["lainEUR"] = kontrak.get("lainProyeksiEUR") or 0
+    out["totalEUR"] = round2(out["feeEUR"] + out["ocEUR"] + out["akomodasiEUR"] + out["lainEUR"])
+    return out
+
+
+def posisi_pembayaran(pembayaran, kontrak, sisa):
+    lst = sorted(pembayaran, key=lambda p: p.get("urut") or 0)
+    dibayar = sum(p.get("jumlahEUR") or 0 for p in lst if p.get("status") == "dibayar")
+    diajukan = sum(p.get("jumlahEUR") or 0 for p in lst if p.get("status") == "diajukan")
+    ter = [p for p in lst if p.get("totalBiayaEUR")]
+    biaya = ter[-1]["totalBiayaEUR"] if ter else dibayar + diajukan
+    total = round2(biaya + sisa["totalEUR"])
+    return {"dibayar": round2(dibayar), "diajukan": round2(diajukan), "biayaTerinvoice": biaya, "proyeksiTotal": total,
+            "invoiceAkhir": round2(total - dibayar - diajukan), "ruangPlafon": round2(kontrak["plafonEUR"] - total)}

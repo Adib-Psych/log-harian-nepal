@@ -25,6 +25,14 @@ Bentuk entri: `{tanggal, kategori, jumlah, mataUang, perlakuan, ket, lampiran:[]
 — kategori: makan, transport, belanja, komunikasi, akomodasi, tiket, visa, kerja, lain;
 perlakuan: oc (jatah other costs), rvo, who, cek (belum pasti), pribadi.
 
+## Tab Pembayaran (25 Nov 2026)
+- Data: koleksi `pembayaran/{id}` (nomor, jenis, periode, totalBiayaEUR, jumlahEUR, hariFee, diajukan, status dibayar|diajukan, tanggalBayar, diterimaIDR, catatan) dan `config/kontrak` (plafonEUR, akhir, invoiceSampai, libur, hariFeeAnggaran, akomodasiProyeksiEUR, lainProyeksiEUR, catatan).
+- Rumus: `proyeksiSisa` + `posisiPembayaran` di `js/aturan.js` (padanan Python di `alat/aturan.py`).
+- Setelah invoice baru diajukan: tambah dokumen `pembayaran` berstatus `diajukan`, lalu perbarui `config/kontrak.invoiceSampai` ke akhir periode invoice itu. Status `dibayar`, tanggal dan nominal Rupiah = ranah Adib (dari mutasi bank atau konfirmasi Adib).
+
+## Sinkron mingguan (Hermes)
+Setiap Senin pagi Hermes menjalankan `cadangkan` lalu langkah Excel di `Financial Report ADB/Nepal RVO 2026/Prompt Sinkron Mingguan v2.md` (keputusan Adib 25 Nov 2026).
+
 ## Kunci Hermes
 Service account dibuat di konsol Firebase (Project settings → Service accounts → Generate new private key).
 Simpan di `~/.config/log-harian-nepal/kunci.json` dengan `chmod 600`. Jangan dipindah ke folder Claude, repo, chat, atau Thar Lay.

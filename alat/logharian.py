@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import aturan  # noqa: E402
 
-KOLEKSI = ("config", "hari", "entri", "kurs")
+KOLEKSI = ("config", "hari", "entri", "kurs", "pembayaran")
 OLEH = os.environ.get("LH_OLEH", "agen:hermes")
 
 
@@ -103,7 +103,7 @@ def main():
     sub.add_parser("ringkas")
     sub.add_parser("sidik")
     p = sub.add_parser("baca"); p.add_argument("koleksi", choices=KOLEKSI + ("jejak",)); p.add_argument("--id"); p.add_argument("--sejak")
-    p = sub.add_parser("tulis"); p.add_argument("koleksi", choices=("hari", "entri", "config")); p.add_argument("id")
+    p = sub.add_parser("tulis"); p.add_argument("koleksi", choices=("hari", "entri", "config", "pembayaran")); p.add_argument("id")
     p.add_argument("--json"); p.add_argument("--file"); p.add_argument("--alasan", required=True)
     p = sub.add_parser("kurs"); p.add_argument("tanggal"); p.add_argument("--json", required=True); p.add_argument("--alasan", required=True)
     p = sub.add_parser("hapus"); p.add_argument("koleksi", choices=("hari", "entri")); p.add_argument("id"); p.add_argument("--alasan", required=True)
@@ -137,7 +137,7 @@ def main():
                     sys.exit(f"Kolom wajib entri tidak ada: {f}")
         if a.koleksi == "hari":
             body["tanggal"] = a.id; body["updatedAt"] = now
-        path = "config/params" if a.koleksi == "config" else f"{a.koleksi}/{a.id}"
+        path = f"config/{a.id}" if a.koleksi == "config" else f"{a.koleksi}/{a.id}"
         tulis(db, fs, path, body, a.alasan); print("OK", path); return
     if a.cmd == "kurs":
         tulis(db, fs, f"kurs/{a.tanggal}", json.loads(a.json), a.alasan); print("OK kurs", a.tanggal); return

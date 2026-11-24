@@ -1,0 +1,8 @@
+*.json
+!tes/vektor.json
+!package.json
+tes/keluaran_js.json
+kunci*
+*.key
+__pycache__/
+.DS_Store

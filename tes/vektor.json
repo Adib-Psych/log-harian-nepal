@@ -1,0 +1,24 @@
+{
+ "cfg": {"mulai":"2026-09-08","tiba":"2026-09-12","ocKtm":83,"ocNepal":38,"feePerDay":300,"rencanaHari":80,"nprPerEur":177,"idrPerEur":20102.05,"usdPerEur":1.139},
+ "kurs": [
+  {"tanggal":"2026-09-15","nprPerEur":163.21,"idrPerEur":19110.5,"usdPerEur":1.17},
+  {"tanggal":"2026-10-01","nprPerEur":164.02},
+  {"tanggal":"2026-10-03","idrPerEur":19500}
+ ],
+ "hari": {
+  "2026-09-10":{"tanggal":"2026-09-10","jenis":"remote","lokasi":"luar"},
+  "2026-09-12":{"tanggal":"2026-09-12","jenis":"travel"},
+  "2026-09-20":{"tanggal":"2026-09-20","jenis":"kerja","lokasi":"nepal","_oleh":"x@y"},
+  "2026-10-02":{"tanggal":"2026-10-02","jenis":"libur","lokasi":"ktm"}
+ },
+ "entri": {
+  "e1":{"tanggal":"2026-09-12","kategori":"makan","jumlah":850,"mataUang":"NPR","perlakuan":"oc"},
+  "e2":{"tanggal":"2026-09-14","kategori":"transport","jumlah":250000,"mataUang":"IDR","perlakuan":"rvo"},
+  "e3":{"tanggal":"2026-10-02","kategori":"makan","jumlah":12.5,"mataUang":"USD","perlakuan":"oc"},
+  "e4":{"tanggal":"2026-10-05","kategori":"lain","jumlah":9.7,"mataUang":"SGD","perlakuan":"cek","ket":"kopi transit · Changi"},
+  "e5":{"tanggal":"2026-09-30","kategori":"akomodasi","jumlah":201,"mataUang":"EUR","perlakuan":"rvo","lampiran":[{"id":"a","nama":"Inv é.pdf","tipe":"application/pdf","ukuran":1.0}]}
+ },
+ "kanonik_kasus": [
+  {"b":2,"a":[1,2.5,{"z":"ü","_x":1}],"c":null,"d":true,"e":300.0,"f":"garis\nbaru \"kutip\""}
+ ]
+}

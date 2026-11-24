@@ -1,0 +1,40 @@
+rules_version = '2';
+// Log Harian Nepal v2 — aturan akses Firestore.
+// - Hanya akun yang punya dokumen akses/{uid} yang boleh membaca/menulis (didaftarkan lewat konsol atau alat admin).
+// - Setiap tulisan wajib membawa jejak: _oleh = email akun yang masuk, _waktu = waktu server.
+// - Koleksi jejak hanya bisa ditambah; tidak bisa diubah atau dihapus.
+// - config dan kurs tidak bisa dihapus dari halaman.
+// Alat Hermes (alat/logharian.py) memakai service account sehingga tidak melewati aturan ini;
+// alat itu sendiri yang mengisi jejak dengan _oleh = "agen:hermes".
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function boleh() {
+      return request.auth != null && exists(/databases/$(database)/documents/akses/$(request.auth.uid));
+    }
+    function jejakOK() {
+      return request.resource.data._oleh == request.auth.token.email
+          && request.resource.data._waktu == request.time;
+    }
+    function data(k) { return k in ['config', 'hari', 'entri', 'kurs', 'nota']; }
+
+    match /akses/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /jejak/{id} {
+      allow read: if boleh();
+      allow create: if boleh() && jejakOK();
+      allow update, delete: if false;
+    }
+    match /{koleksi}/{id} {
+      allow read: if boleh() && data(koleksi);
+      allow create, update: if boleh() && data(koleksi) && jejakOK();
+      allow delete: if boleh() && koleksi in ['hari', 'entri', 'nota'];
+    }
+    match /nota/{id}/bagian/{i} {
+      allow read: if boleh();
+      allow create, update: if boleh() && jejakOK();
+      allow delete: if boleh();
+    }
+  }
+}
